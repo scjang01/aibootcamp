@@ -1,0 +1,21 @@
+model_list:
+  - model_name: HCX-005
+    litellm_params:
+      model: openai/HCX-005
+      api_base: https://clovastudio.stream.ntruss.com/v1/openai
+      api_key: os.environ/NAVER_OPENAI_API_KEY
+
+  - model_name: HCX-007
+    litellm_params:
+      model: openai/HCX-007
+      api_base: https://clovastudio.stream.ntruss.com/v1/openai
+      api_key: os.environ/NAVER_OPENAI_API_KEY
+
+  - model_name: HCX-DASH-002
+    litellm_params:
+      model: openai/HCX-DASH-002
+      api_base: https://clovastudio.stream.ntruss.com/v1/openai
+      api_key: os.environ/NAVER_OPENAI_API_KEY
+
+litellm_settings:
+  drop_params: true

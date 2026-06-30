@@ -60,7 +60,7 @@ function call_litellm_mock(string $prompt): string
 
 function call_litellm(string $prompt): string
 {
-    if (USE_MOCK || trim((string)LITELLM_KEY) === '') {
+    if (USE_MOCK) {
         return call_litellm_mock($prompt);
     }
 
@@ -91,14 +91,19 @@ function call_litellm(string $prompt): string
         return call_litellm_mock($prompt);
     }
 
+    $headers = [
+        'Content-Type: application/json',
+    ];
+
+    if (trim((string)LITELLM_KEY) !== '') {
+        $headers[] = 'Authorization: Bearer ' . LITELLM_KEY;
+    }
+
     $ch = curl_init($url);
     curl_setopt_array($ch, [
         CURLOPT_POST => true,
         CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_HTTPHEADER => [
-            'Content-Type: application/json',
-            'Authorization: Bearer ' . LITELLM_KEY,
-        ],
+        CURLOPT_HTTPHEADER => $headers,
         CURLOPT_POSTFIELDS => $body,
         CURLOPT_CONNECTTIMEOUT => min(10, max(1, (int)LITELLM_TIMEOUT)),
         CURLOPT_TIMEOUT => max(1, (int)LITELLM_TIMEOUT),

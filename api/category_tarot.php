@@ -14,11 +14,20 @@ require_once __DIR__ . '/litellm.php';
 require_method('POST');
 
 $input = read_input();
-$category = trim((string)($input['category'] ?? $input['topic'] ?? ''));
+$categoryLabel = trim((string)($input['category'] ?? $input['topic'] ?? ''));
 $question = trim((string)($input['question'] ?? ''));
 
-if ($category === '' || $question === '') {
+if ($categoryLabel === '' || $question === '') {
     json_fail('category와 question은 필수입니다.', 'category/question required', 422);
+}
+
+$topic = normalize_topic_code($categoryLabel);
+if ($topic === null) {
+    json_fail(
+        '지원하지 않는 타로 주제입니다.',
+        'topic must be one of love|career|study|relationship|money|health',
+        422
+    );
 }
 
 $user = require_login();
@@ -27,15 +36,16 @@ $userId = (int)$user['id'];
 try {
     $pdo = db();
     $cards = draw_three_cards($pdo);
-    $prompt = generate_tarot_prompt($category, $question, $cards);
+    $prompt = generate_tarot_prompt($categoryLabel, $question, $cards);
     $answer = call_litellm($prompt);
-    $readingId = insert_topic_reading($pdo, $userId, $category, $question, $cards, $answer);
+    $readingId = insert_topic_reading($pdo, $userId, $topic, $question, $cards, $answer);
 
     json_ok([
         'reading_id' => $readingId,
         'type' => 'topic',
-        'category' => $category,
-        'topic' => $category,
+        'category' => $categoryLabel,
+        'category_label' => $categoryLabel,
+        'topic' => $topic,
         'question' => $question,
         'cards' => $cards,
         'answer' => $answer,
@@ -58,6 +68,7 @@ function insert_topic_reading(
     /*
      * history.php가 topic_readings 테이블에서 topic, question, cards, result를 조회합니다.
      * 프론트 입력명은 category여도 DB에는 topic 컬럼으로 저장합니다.
+     * TODO: 실제 DB에서 SHOW CREATE TABLE topic_readings 결과를 확인한 뒤 컬럼 타입/제약을 최종 보정합니다.
      */
     $stmt = $pdo->prepare(
         'INSERT INTO topic_readings
@@ -75,4 +86,26 @@ function insert_topic_reading(
     ]);
 
     return (int)$pdo->lastInsertId();
+}
+
+function normalize_topic_code(string $categoryOrTopic): ?string
+{
+    $value = trim($categoryOrTopic);
+    $normalized = strtolower($value);
+
+    $allowedTopics = ['love', 'career', 'study', 'relationship', 'money', 'health'];
+    if (in_array($normalized, $allowedTopics, true)) {
+        return $normalized;
+    }
+
+    $koreanTopicMap = [
+        '연애' => 'love',
+        '진로' => 'career',
+        '학업' => 'study',
+        '인간관계' => 'relationship',
+        '금전' => 'money',
+        '건강' => 'health',
+    ];
+
+    return $koreanTopicMap[$value] ?? null;
 }
