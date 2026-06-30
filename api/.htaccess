@@ -1,0 +1,4 @@
+# .env 등 민감/숨김 파일이 웹으로 노출되지 않도록 차단
+<FilesMatch "(^\.env|\.env\..*|^\.git)">
+    Require all denied
+</FilesMatch>
